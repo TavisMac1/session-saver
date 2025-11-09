@@ -3,7 +3,7 @@
   "name": "Session Saver",
   "version": "1.0",
   "description": "Save Firefox tabs",
-  "permissions": ["tabs"],
+  "permissions": ["tabs", "storage"],
   "browser_action": {
     "default_popup": "index.html"
   }

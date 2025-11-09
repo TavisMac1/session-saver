@@ -1,6 +1,31 @@
 import dom
 
+#--------------------
+# A simple tool for saving browser sessions in Firefox
+#--------------------
+
 var urls: seq[string] = @[]
+
+proc getAllTabs() =
+  {.emit: """
+    browser.tabs.query({}).then(tabs => {
+      window.urls = tabs.map(tab => tab.url);
+      document.getElementById("urls").innerHTML = 
+        window.urls.map(url => '<li>' + url + '</li>').join('');
+    });
+  """.}
+
+proc saveSessionData() =
+  {.emit: """
+    browser.storage.local.set({
+      savedUrls: window.urls,
+      savedDate: new Date().toISOString()
+    }).then(() => {
+      window.alert('Session saved successfully!');
+    }).catch(err => {
+      window.alert('Error saving session: ' + err);
+    });
+  """.}
 
 proc loadSavedUrls() =
   {.emit: """
@@ -13,28 +38,16 @@ proc loadSavedUrls() =
     });
   """.}
 
-proc getAllTabs() =
+proc openTabs() = 
   {.emit: """
-    browser.tabs.query({}).then(tabs => {
-      window.urls = tabs.map(tab => tab.url);
-      document.getElementById("urls").innerHTML = 
-        window.urls.map(url => '<li>' + url + '</li>').join('');
+    window.urls.forEach(url => {
+        browser.tabs.create({ url: url });
     });
   """.}
 
-proc saveSessionData(): string =
-  if urls.len == 0: 
-    return "No tabs to save."
-  {.emit: """
-    browser.storage.local.set({
-      savedUrls: window.urls,
-      savedDate: new Date().toISOString()
-    }).then(() => {
-      window.alert('Session saved successfully!');
-    }).catch(err => {
-      window.alert('Error saving session: ' + err);
-    });
-  """.}
+proc validateUrls(): string =
+  if urls.len == 0:
+    return "No tabs found to open"
   return ""
 
 proc main() =
@@ -43,17 +56,22 @@ proc main() =
     <p>Your Firefox Tabs:</p>
     <p>------------------</p>
     <ul id="urls"></ul>
-  """ 
-  getAllTabs()
+  """
 
-  let button = document.createElement("button")
-  button.innerHTML = "Save Session"
-  button.onclick = proc(e: Event) =
-    var saveResponse = saveSessionData()
-    if saveResponse.len == 0: 
-      window.alert(saveResponse)
+  let saveButton = document.createElement("button")
+  saveButton.innerHTML = "Save Session"
+  saveButton.onclick = proc(e: Event) =
+    getAllTabs()
+    saveSessionData()
 
-  content.appendChild(button)
+  let openButton = document.createElement("button")
+  openButton.innerHTML = "Open Saved Tabs"
+  openButton.onclick = proc(e: Event) =
+    loadSavedUrls()
+    openTabs()
+
+  content.appendChild(saveButton)
+  content.appendChild(openButton)
 
 when isMainModule:
   main()
